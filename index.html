@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>性癖瓶シンクロ診断 - 豪華演出Ver</title>
+    <title>性癖瓶シンクロ診断 - 豪華演出Ver(短縮URL対応)</title>
     <style>
         :root { --bg: #fdfbfb; --accent: #ff4d79; --blue: #6366f1; --gray: #666; }
         body { font-family: sans-serif; background: var(--bg); color: #444; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; transition: background 1s, color 1s; min-height: 100vh; }
         
-        /* 背景演出用クラス */
-        body.rank-god { background: #fff0f5; color: #d00060; } /* 神：ピンク */
-        body.rank-good { background: #f0f7ff; color: #1a4d80; } /* 良好：ブルー */
-        body.rank-bad { background: #ebebeb; color: #666; }    /* 他人：グレー */
+        /* ランク別背景 */
+        body.rank-god { background: #fff0f5; color: #d00060; } 
+        body.rank-good { background: #f0f7ff; color: #1a4d80; } 
+        body.rank-bad { background: #ebebeb; color: #666; }    
 
         .card { background: rgba(255,255,255,0.9); width: 100%; max-width: 600px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 20px; backdrop-filter: blur(5px); }
         h1 { font-size: 1.4rem; text-align: center; margin-top: 0; }
@@ -28,7 +28,6 @@
         .score-big { font-size: 4rem; font-weight: bold; }
         .rank-name { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; display: block; }
         
-        /* 1つずつ表示されるリストのアニメーション */
         .diff-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); animation: slideIn 0.3s ease-out forwards; opacity: 0; }
         @keyframes slideIn { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -48,7 +47,7 @@
 <body>
 
     <div class="card" id="inputCard">
-        <h1>瓶シンクロ・アナライザー</h1>
+        <h1>性癖瓶シンクロ診断</h1>
         <div class="input-group">
             <label>正解：AさんのURL</label>
             <input type="text" id="urlA" placeholder="URLをペースト...">
@@ -62,7 +61,7 @@
 
     <div id="loading" class="loading-overlay">
         <div class="spinner"></div>
-        <div id="loadingText">性癖データを照合中...</div>
+        <div id="loadingText">データを圧縮解凍・照合中...</div>
     </div>
 
     <div class="card" id="resultArea">
@@ -72,55 +71,56 @@
             <div class="score-big" id="scoreDisplay">0.0%</div>
         </div>
         <div id="pitariDisplay" style="font-weight:bold; margin-bottom:20px;"></div>
-        
         <div id="comparisonList" style="margin-top:20px; border-top:1px solid #ddd;"></div>
-        
         <button class="calc-btn" style="margin-top:30px; background:#666; box-shadow:0 4px 0 #333;" onclick="location.reload()">再試行</button>
     </div>
 
     <script>
-        const COLORS = { pink: '#ff5d8f', blue: '#6366f1' };
+        // メーカー側と同じプリセット順序を維持（インデックス解読用）
+        const ALL_PRESETS = ['長身','小柄','モデル体型','日焼け','褐色','貧乳・微乳','巨乳','お尻','手','生足・太もも','おへそ','背中','そばかす','ショートヘア','ロングヘア','ボブヘア','ポニーテール','ツインテール','お団子ヘア','ウルフカット','インナーカラー','ぱっつん','三つ編み','シースルーバング','デコ出し','ロリ','ショタ','お姉さん','妹・姉','ギャル','メスガキ','清楚','清楚ビッチ','無口','クーデレ','地雷系','TS','ツンデレ','天然・ドジっ子','小悪魔','ギャップ萌え','外国人・ハーフ','男の娘','オタク女子','強気・男勝り','スポーツ女子','高学歴女子','一人称名前','制服','スーツ','和服','部屋着（パジャマ）','コスプレ','オーバーサイズ','可愛い下着','子供っぽい下着','ガーターベルト','メガネ','チョーカー','幼馴染','同い年','先生と生徒','主従関係','体格差','片思い','共依存','密室','野外・露出','背徳感','NTR','初対面','喧嘩中','執着','敬語','ローション・オイル','汗','あくび','くしゃみ','声','泣き顔','怒り顔','拒絶','キス','ハグ','膝枕','頭を撫でる','首を噛む','おねだり','指舐め','耳攻め','囁き','首絞め','命令','催眠','目隠し','緊縛','放置','拘束','M','S','お漏らし','焦らし'];
 
-        function extractData(url) {
+        // 短縮URL(v2)を解読する関数
+        function parseURL(urlStr) {
             try {
-                const data = new URL(url).searchParams.get('data');
-                return JSON.parse(decodeURIComponent(atob(data)));
+                const url = new URL(urlStr);
+                const v2 = url.searchParams.get('v2');
+                if (!v2) return null;
+
+                return v2.split('.').map(p => {
+                    const [n, v, s] = p.split('_');
+                    const val = parseInt(v);
+                    const name = isNaN(n) ? decodeURIComponent(n) : ALL_PRESETS[parseInt(n)];
+                    return { name, val, side: s };
+                });
             } catch (e) { return null; }
         }
 
-        const getVal = (item) => (item.level * ((item.color === COLORS.pink || item.color === '#ff5d8f') ? 1 : -1));
-
         async function startAnalysis() {
-            const dataA = extractData(document.getElementById('urlA').value);
-            const dataB = extractData(document.getElementById('urlB').value);
+            const dataA = parseURL(document.getElementById('urlA').value);
+            const dataB = parseURL(document.getElementById('urlB').value);
 
             if (!dataA || !dataB) {
-                alert("URLを正しく入力してください！");
+                alert("短縮URL(v2)を正しく入力してください！");
                 return;
             }
 
             document.getElementById('inputCard').style.display = 'none';
-            const loading = document.getElementById('loading');
-            loading.style.display = 'flex';
+            document.getElementById('loading').style.display = 'flex';
 
-            // 演出：少し待たせる
             await new Promise(r => setTimeout(r, 1500));
-            loading.style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
             document.getElementById('resultArea').style.display = 'block';
 
             let totalDiff = 0;
             let pitari = 0;
             const list = document.getElementById('comparisonList');
             
-            // 1つずつめくる演出
             for (let i = 0; i < dataA.length; i++) {
                 const itemA = dataA[i];
-                const itemB = dataB.find(b => b.name === itemA.name) || { level: 0, color: COLORS.pink };
+                // 名前でBさんのデータを探す（なければ0として扱う）
+                const itemB = dataB.find(b => b.name === itemA.name) || { val: 0 };
                 
-                const valA = getVal(itemA);
-                const valB = getVal(itemB);
-                const diff = Math.abs(valA - valB);
-                
+                const diff = Math.abs(itemA.val - itemB.val);
                 totalDiff += diff;
                 if (diff === 0) pitari++;
 
@@ -134,24 +134,19 @@
                 row.innerHTML = `
                     <div class="item-info">
                         <div class="item-label">${itemA.name} ${pitariMark}</div>
-                        <div class="val-compare">A:${valA > 0 ? '+' : ''}${valA} / B:${valB > 0 ? '+' : ''}${valB} ${badBadge}</div>
+                        <div class="val-compare">A:${itemA.val > 0 ? '+' : ''}${itemA.val} / B:${itemB.val > 0 ? '+' : ''}${itemB.val} ${badBadge}</div>
                     </div>
                     <div class="diff-val">Δ ${diff}</div>
                 `;
                 list.appendChild(row);
-                
-                // 瓶が多い場合は少しずつスクロール
                 window.scrollTo(0, document.body.scrollHeight);
-                await new Promise(r => setTimeout(r, 150)); // めくる速度
+                await new Promise(r => setTimeout(r, 150));
             }
 
-            // 最終計算
             const maxError = dataA.length * 200;
             const syncRate = ((1 - (totalDiff / maxError)) * 100).toFixed(1);
             
-            // スコアのカウントアップ演出
             animateScore(syncRate);
-            
             document.getElementById('pitariDisplay').innerText = `ピタリ賞：${pitari} / ${dataA.length}`;
             setRank(syncRate);
         }
@@ -174,22 +169,11 @@
         function setRank(rate) {
             const body = document.body;
             const label = document.getElementById('rankLabel');
-            if (rate == 100) {
-                label.innerText = "称号：【神の理解者】";
-                body.className = "rank-god";
-            } else if (rate >= 90) {
-                label.innerText = "称号：【性癖の双子】";
-                body.className = "rank-god";
-            } else if (rate >= 70) {
-                label.innerText = "称号：【名探偵】";
-                body.className = "rank-good";
-            } else if (rate >= 40) {
-                label.innerText = "称号：【親友レベル】";
-                body.className = "rank-good";
-            } else {
-                label.innerText = "称号：【完全なる赤の他人】";
-                body.className = "rank-bad";
-            }
+            if (rate == 100) { label.innerText = "称号：【神の理解者】"; body.className = "rank-god"; }
+            else if (rate >= 90) { label.innerText = "称号：【性癖の双子】"; body.className = "rank-god"; }
+            else if (rate >= 70) { label.innerText = "称号：【名探偵】"; body.className = "rank-good"; }
+            else if (rate >= 40) { label.innerText = "称号：【親友レベル】"; body.className = "rank-good"; }
+            else { label.innerText = "称号：【完全なる赤の他人】"; body.className = "rank-bad"; }
         }
     </script>
 </body>
