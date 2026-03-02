@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性癖瓶シンクロ診断 - 豪華演出Ver</title>
+    <style>
+        :root { --bg: #fdfbfb; --accent: #ff4d79; --blue: #6366f1; --gray: #666; }
+        body { font-family: sans-serif; background: var(--bg); color: #444; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; transition: background 1s, color 1s; min-height: 100vh; }
+        
+        /* 背景演出用クラス */
+        body.rank-god { background: #fff0f5; color: #d00060; } /* 神：ピンク */
+        body.rank-good { background: #f0f7ff; color: #1a4d80; } /* 良好：ブルー */
+        body.rank-bad { background: #ebebeb; color: #666; }    /* 他人：グレー */
+
+        .card { background: rgba(255,255,255,0.9); width: 100%; max-width: 600px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 20px; backdrop-filter: blur(5px); }
+        h1 { font-size: 1.4rem; text-align: center; margin-top: 0; }
+        
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; opacity: 0.7; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.8); }
+        
+        .calc-btn { width: 100%; height: 55px; background: #333; color: white; border: none; border-radius: 15px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 0 #000; }
+        .calc-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+
+        #resultArea { display: none; text-align: center; }
+        .score-box { position: relative; margin: 20px 0; }
+        .score-big { font-size: 4rem; font-weight: bold; }
+        .rank-name { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; display: block; }
+        
+        /* 1つずつ表示されるリストのアニメーション */
+        .diff-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); animation: slideIn 0.3s ease-out forwards; opacity: 0; }
+        @keyframes slideIn { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .item-info { text-align: left; flex: 1; }
+        .item-label { font-size: 0.9rem; font-weight: bold; }
+        .val-compare { font-size: 0.75rem; opacity: 0.8; }
+        .diff-val { width: 60px; text-align: right; font-weight: bold; font-family: monospace; }
+        
+        .bad-match { background: #ff4d4d; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-left: 5px; }
+        .pitari-mark { color: #d4a017; font-size: 1.2rem; }
+
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); color: white; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #fff; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="card" id="inputCard">
+        <h1>瓶シンクロ・アナライザー</h1>
+        <div class="input-group">
+            <label>正解：AさんのURL</label>
+            <input type="text" id="urlA" placeholder="URLをペースト...">
+        </div>
+        <div class="input-group">
+            <label>予想：BさんのURL</label>
+            <input type="text" id="urlB" placeholder="URLをペースト...">
+        </div>
+        <button class="calc-btn" onclick="startAnalysis()">解析プロトコル始動</button>
+    </div>
+
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loadingText">性癖データを照合中...</div>
+    </div>
+
+    <div class="card" id="resultArea">
+        <span id="rankLabel" class="rank-name">ランク判定中...</span>
+        <div class="score-box">
+            <div style="font-size: 0.8rem; opacity: 0.6;">SYNCHRO RATE</div>
+            <div class="score-big" id="scoreDisplay">0.0%</div>
+        </div>
+        <div id="pitariDisplay" style="font-weight:bold; margin-bottom:20px;"></div>
+        
+        <div id="comparisonList" style="margin-top:20px; border-top:1px solid #ddd;"></div>
+        
+        <button class="calc-btn" style="margin-top:30px; background:#666; box-shadow:0 4px 0 #333;" onclick="location.reload()">再試行</button>
+    </div>
+
+    <script>
+        const COLORS = { pink: '#ff5d8f', blue: '#6366f1' };
+
+        function extractData(url) {
+            try {
+                const data = new URL(url).searchParams.get('data');
+                return JSON.parse(decodeURIComponent(atob(data)));
+            } catch (e) { return null; }
+        }
+
+        const getVal = (item) => (item.level * ((item.color === COLORS.pink || item.color === '#ff5d8f') ? 1 : -1));
+
+        async function startAnalysis() {
+            const dataA = extractData(document.getElementById('urlA').value);
+            const dataB = extractData(document.getElementById('urlB').value);
+
+            if (!dataA || !dataB) {
+                alert("URLを正しく入力してください！");
+                return;
+            }
+
+            document.getElementById('inputCard').style.display = 'none';
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            // 演出：少し待たせる
+            await new Promise(r => setTimeout(r, 1500));
+            loading.style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+
+            let totalDiff = 0;
+            let pitari = 0;
+            const list = document.getElementById('comparisonList');
+            
+            // 1つずつめくる演出
+            for (let i = 0; i < dataA.length; i++) {
+                const itemA = dataA[i];
+                const itemB = dataB.find(b => b.name === itemA.name) || { level: 0, color: COLORS.pink };
+                
+                const valA = getVal(itemA);
+                const valB = getVal(itemB);
+                const diff = Math.abs(valA - valB);
+                
+                totalDiff += diff;
+                if (diff === 0) pitari++;
+
+                const row = document.createElement('div');
+                row.className = 'diff-row';
+                row.style.animationDelay = `${i * 0.1}s`;
+                
+                const badBadge = diff >= 150 ? '<span class="bad-match">！？ 逆転</span>' : '';
+                const pitariMark = diff === 0 ? '<span class="pitari-mark">★</span>' : '';
+
+                row.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-label">${itemA.name} ${pitariMark}</div>
+                        <div class="val-compare">A:${valA > 0 ? '+' : ''}${valA} / B:${valB > 0 ? '+' : ''}${valB} ${badBadge}</div>
+                    </div>
+                    <div class="diff-val">Δ ${diff}</div>
+                `;
+                list.appendChild(row);
+                
+                // 瓶が多い場合は少しずつスクロール
+                window.scrollTo(0, document.body.scrollHeight);
+                await new Promise(r => setTimeout(r, 150)); // めくる速度
+            }
+
+            // 最終計算
+            const maxError = dataA.length * 200;
+            const syncRate = ((1 - (totalDiff / maxError)) * 100).toFixed(1);
+            
+            // スコアのカウントアップ演出
+            animateScore(syncRate);
+            
+            document.getElementById('pitariDisplay').innerText = `ピタリ賞：${pitari} / ${dataA.length}`;
+            setRank(syncRate);
+        }
+
+        function animateScore(target) {
+            let current = 0;
+            const display = document.getElementById('scoreDisplay');
+            const step = target / 50;
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    display.innerText = target + "%";
+                    clearInterval(timer);
+                } else {
+                    display.innerText = current.toFixed(1) + "%";
+                }
+            }, 20);
+        }
+
+        function setRank(rate) {
+            const body = document.body;
+            const label = document.getElementById('rankLabel');
+            if (rate == 100) {
+                label.innerText = "称号：【神の理解者】";
+                body.className = "rank-god";
+            } else if (rate >= 90) {
+                label.innerText = "称号：【性癖の双子】";
+                body.className = "rank-god";
+            } else if (rate >= 70) {
+                label.innerText = "称号：【名探偵】";
+                body.className = "rank-good";
+            } else if (rate >= 40) {
+                label.innerText = "称号：【親友レベル】";
+                body.className = "rank-good";
+            } else {
+                label.innerText = "称号：【完全なる赤の他人】";
+                body.className = "rank-bad";
+            }
+        }
+    </script>
+</body>
+</html>
