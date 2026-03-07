@@ -21,19 +21,18 @@
         .share-btn { background: var(--blue); box-shadow: 0 5px 0 #3d3fb5; margin-top: 15px; }
         #resultArea { display: none; text-align: center; animation: fadeIn 0.8s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .result-header { font-size: 0.95rem; font-weight: bold; margin-bottom: 15px; line-height: 1.6; }
         .score-big { font-size: 5rem; font-weight: 900; color: var(--accent); margin: 0; line-height: 1; }
         .rank-name { font-size: 1.6rem; font-weight: bold; display: block; margin-top: 15px; color: var(--black); }
         .rank-desc { font-size: 0.9rem; font-weight: bold; color: #777; margin-top: 8px; margin-bottom: 25px; display: block; padding: 0 10px; }
-        .item-row { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; transition: 0.3s; }
+        .item-row { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; margin-bottom: 10px; }
         .diff-tag { font-size: 0.75rem; padding: 3px 10px; border-radius: 6px; background: #f0f0f0; color: #555; font-weight: bold; }
         .bar-container { display: flex; align-items: center; gap: 10px; height: 14px; margin-top: 6px; }
-        .bar-label { font-size: 0.7rem; width: 55px; color: #999; font-weight: bold; flex-shrink: 0; }
+        .bar-label { font-size: 0.7rem; width: 45px; color: #999; flex-shrink: 0; }
         .bar-bg { flex: 1; background: #f0f0f0; height: 100%; border-radius: 7px; overflow: hidden; }
-        .bar-fill { height: 100%; transition: width 1.8s cubic-bezier(0.19, 1, 0.22, 1); }
+        .bar-fill { height: 100%; transition: width 1.5s cubic-bezier(0.19, 1, 0.22, 1); }
         .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.98); flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        .spinner { width: 60px; height: 60px; border: 6px solid #f3f3f3; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite cubic-bezier(0.5, 0, 0.5, 1); margin-bottom: 20px; }
+        .spinner { width: 60px; height: 60px; border: 6px solid #f3f3f3; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite linear; margin-bottom: 20px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -42,41 +41,40 @@
     <div class="card" id="inputCard">
         <h1>性癖シンクロ診断</h1>
         <div class="name-inputs">
-            <div class="input-group"><label>出題者の名前</label><input type="text" id="nameA" placeholder="Aさん"></div>
-            <div class="input-group"><label>回答者の名前</label><input type="text" id="nameB" placeholder="Bさん"></div>
+            <div class="input-group"><label>出題者</label><input type="text" id="nameA" placeholder="Aさん"></div>
+            <div class="input-group"><label>回答者</label><input type="text" id="nameB" placeholder="Bさん"></div>
         </div>
         <div class="input-group"><label>🔑 正解URL</label><input type="text" id="urlA"></div>
         <div class="input-group"><label>❓ 回答URL</label><input type="text" id="urlB"></div>
         <button class="calc-btn" onclick="startAnalysis()">答え合わせを開始！</button>
     </div>
 
-    <div id="loading" class="loading-overlay"><div class="spinner"></div><div style="font-weight:bold; color:var(--accent);">スキャン中...</div></div>
+    <div id="loading" class="loading-overlay"><div class="spinner"></div><div style="font-weight:bold; color:var(--accent);">シンクロ率を計算中...</div></div>
 
     <div class="card" id="resultArea">
-        <div class="result-header"><span id="resNameA" style="color:var(--accent)"></span> さんの結果を <span id="resNameB" style="color:var(--blue)"></span> さんが覗いた...</div>
+        <div style="font-size: 0.9rem; margin-bottom: 15px;">
+            <span id="resNameA" style="color:var(--accent); font-weight:bold;"></span> さんの深層心理を<br>
+            <span id="resNameB" style="color:var(--blue); font-weight:bold;"></span> さんが覗いた結果...
+        </div>
         <div class="score-big" id="scoreDisplay">0.0%</div>
         <span id="rankLabel" class="rank-name"></span>
         <span id="rankDesc" class="rank-desc"></span>
-        <div id="pitariDisplay" style="font-size:0.9rem; font-weight:bold; color:var(--gold); margin-bottom:25px; background:rgba(212, 160, 23, 0.1); padding:6px 16px; border-radius:20px;"></div>
+        <div id="pitariDisplay" style="font-size:0.85rem; font-weight:bold; color:var(--gold); margin-bottom:25px;"></div>
         <div id="comparisonList"></div>
         <button class="calc-btn share-btn" onclick="copyShareURL()">結果URLのみコピー</button>
         <button class="calc-btn" style="background:#888; box-shadow:0 5px 0 #555;" onclick="location.reload()">やり直す</button>
     </div>
 
     <script>
-        // メーカーサイトの全103項目を正確に反映
+        // 制作側サイトのソースから抽出した「完全な」プリセットリスト
         const ALL_PRESETS = [
-            '長身','小柄','モデル体型','日焼け','褐色','貧乳・微乳','巨乳','お尻','手','生足・太もも',
-            'おへそ','背中','そばかす','ショートヘア','ロングヘア','ボブヘア','ポニーテール','ツインテール','お団子ヘア','ウルフカット',
-            'インナーカラー','ぱっつん','三つ編み','シースルーバング','デコ出し','ロリ','ショタ','お姉さん','妹・姉','ギャル',
-            'メスガキ','清楚','清楚ビッチ','無口','クーデレ','地雷系','TS','ツンデレ','天然・ドジっ子','小悪魔',
-            'ギャップ萌え','外国人・ハーフ','男の娘','オタク女子','強気・男勝り','スポーツ女子','高学歴女子','一人称名前','制服','スーツ',
-            '和服','部屋着（パジャマ）','コスプレ','オーバーサイズ','可愛い下着','子供っぽい下着','ガーターベルト','メガネ','チョーカー','幼馴染',
-            '同い年','先生と生徒','主従関係','体格差','片思い','共依存','密室','野外・露出','背徳感','NTR',
-            '初対面','喧嘩中','執着','敬語','ローション・オイル','汗','あくび','くしゃみ','声','泣き顔',
-            '怒り顔','拒絶','キス','ハグ','膝枕','頭を撫でる','首を噛む','おねだり','指舐め','耳攻め',
-            '囁き','首絞め','命令','催眠','目隠し','緊縛','放置','拘束','M','S',
-            'お漏らし','焦らし','玩具'
+            '長身','小柄','モデル体型','日焼け','褐色','貧乳・微乳','巨乳','お尻','手','生足・太もも','おへそ','背中','そばかす',
+            'ショートヘア','ロングヘア','ボブヘア','ポニーテール','ツインテール','お団子ヘア','ウルフカット','インナーカラー','ぱっつん','三つ編み','シースルーバング','デコ出し',
+            'ロリ','ショタ','お姉さん','妹・姉','ギャル','メスガキ','清楚','清楚ビッチ','無口','クーデレ','地雷系','TS','ツンデレ','天然・ドジっ子','小悪魔','ギャップ萌え','外国人・ハーフ','男の娘','オタク女子','強気・男勝り','スポーツ女子','高学歴女子','一人称名前',
+            '制服','スーツ','和服','部屋着（パジャマ）','コスプレ','オーバーサイズ','可愛い下着','子供っぽい下着','ガーターベルト','メガネ','チョーカー',
+            '幼馴染','同い年','先生と生徒','主従関係','体格差','片思い','共依存','密室','野外・露出','背徳感','NTR','初対面','喧嘩中','執着','開拓','敬語',
+            'ローション・オイル','汗','あくび','くしゃみ','声','泣き顔','怒り顔','拒絶',
+            'キス','ハグ','膝枕','頭を撫でる','首を噛む','おねだり','指舐め','耳攻め','囁き','首絞め','命令','催眠','目隠し','緊縛','放置','拘束','M','S','お漏らし','焦らし'
         ];
 
         const RANKS = [
@@ -93,21 +91,20 @@
                 const url = new URL(urlStr);
                 const v2 = url.searchParams.get('v2');
                 if (!v2) return null;
-                let parts = v2.includes('.') ? v2.split('.') : v2.match(/[^_]+_[^_]+_[^_]+/g);
+                // ドット区切りとアンダースコア連続の両方に対応
+                const parts = v2.includes('.') ? v2.split('.') : v2.match(/[^_]+_[^_]+_[^_]+/g);
                 if (!parts) return null;
                 return parts.map(p => {
                     const [n, v, s] = p.split('_');
-                    return { name: isNaN(n) ? decodeURIComponent(n) : (ALL_PRESETS[parseInt(n)] || "未定義項目"), val: parseFloat(v) };
+                    return { name: isNaN(n) ? decodeURIComponent(n) : (ALL_PRESETS[parseInt(n)] || "不明"), val: parseFloat(v) };
                 });
             } catch (e) { return null; }
         }
 
         async function startAnalysis() {
-            const nameA = document.getElementById('nameA').value || "出題者";
-            const nameB = document.getElementById('nameB').value || "回答者";
             const dataA = parseURL(document.getElementById('urlA').value);
             const dataB = parseURL(document.getElementById('urlB').value);
-            if (!dataA || !dataB) return alert("URLを正しく貼り付けてください！");
+            if (!dataA || !dataB) return alert("URLが正しくありません！");
 
             document.getElementById('inputCard').style.display = 'none';
             document.getElementById('loading').style.display = 'flex';
@@ -115,13 +112,13 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('resultArea').style.display = 'block';
 
-            document.getElementById('resNameA').innerText = nameA;
-            document.getElementById('resNameB').innerText = nameB;
+            document.getElementById('resNameA').innerText = document.getElementById('nameA').value || "出題者";
+            document.getElementById('resNameB').innerText = document.getElementById('nameB').value || "回答者";
 
             let totalDiff = 0, pitari = 0;
             const list = document.getElementById('comparisonList');
             list.innerHTML = "";
-            
+
             dataA.forEach(itemA => {
                 const itemB = dataB.find(b => b.name === itemA.name) || { val: 0 };
                 const diff = Math.abs(itemA.val - itemB.val);
@@ -138,7 +135,7 @@
             setTimeout(() => document.querySelectorAll('.bar-fill').forEach(el => el.style.width = el.getAttribute('data-val') + '%'), 100);
             const syncRate = ((1 - (totalDiff / (dataA.length * 200))) * 100).toFixed(1);
             animateScore(syncRate);
-            document.getElementById('pitariDisplay').innerText = `完全一致数：${pitari} / ${dataA.length}`;
+            document.getElementById('pitariDisplay').innerText = `完全一致：${pitari} / ${dataA.length}`;
             const rank = RANKS.find(r => syncRate >= r.min);
             document.getElementById('rankLabel').innerText = rank.title;
             document.getElementById('rankDesc').innerText = rank.desc;
@@ -163,7 +160,7 @@
                 p.set('nA', document.getElementById('resNameA').innerText);
                 p.set('nB', document.getElementById('resNameB').innerText);
                 navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?' + p.toString()).then(() => alert("URLをコピーしました！"));
-            } catch (e) { alert("失敗しました。"); }
+            } catch (e) { alert("コピーに失敗しました。"); }
         }
 
         window.onload = function() {
