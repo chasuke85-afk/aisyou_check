@@ -50,7 +50,7 @@
 <body>
 
     <div class="card" id="inputCard">
-        <h1>性癖シンクロ診断2</h1>
+        <h1>性癖シンクロ診断</h1>
         
         <div class="name-inputs">
             <div class="input-group">
@@ -101,26 +101,37 @@
     <script>
         const ALL_PRESETS = ['長身','小柄','モデル体型','日焼け','褐色','貧乳・微乳','巨乳','お尻','手','生足・太もも','おへそ','背中','そばかす','ショートヘア','ロングヘア','ボブヘア','ポニーテール','ツインテール','お団子ヘア','ウルフカット','インナーカラー','ぱっつん','三つ編み','シースルーバング','デコ出し','ロリ','ショタ','お姉さん','妹・姉','ギャル','メスガキ','清楚','清楚ビッチ','無口','クーデレ','地雷系','TS','ツンデレ','天然・ドジっ子','小悪魔','ギャップ萌え','外国人・ハーフ','男の娘','オタク女子','強気・男勝り','スポーツ女子','高学歴女子','一人称名前','制服','スーツ','和服','部屋着（パジャマ）','コスプレ','オーバーサイズ','可愛い下着','子供っぽい下着','ガーターベルト','メガネ','チョーカー','幼馴染','同い年','先生と生徒','主従関係','体格差','片思い','共依存','密室','野外・露出','背徳感','NTR','初対面','喧嘩中','執着','敬語','ローション・オイル','汗','あくび','くしゃみ','声','泣き顔','怒り顔','拒絶','キス','ハグ','膝枕','頭を撫でる','首を噛む','おねだり','指舐め','耳攻め','囁き','首絞め','命令','催眠','目隠し','緊縛','放置','拘束','M','S','お漏らし','焦らし'];
 
+        // 50%以下を一律にまとめた称号テーブル（案2）
         const RANKS = [
-            { min: 100, title: "👁️ もはやストーカーの領域", desc: "怖い。筒抜けすぎてプライバシー皆無。" },
-            { min: 90, title: "🧠 脳みそのバックアップ", desc: "思考回路が同期しすぎてて気持ち悪い（褒め言葉）。" },
-            { min: 80, title: "💉 性癖の共犯者", desc: "悪いこと以外でその理解力を使いなよ。" },
-            { min: 70, title: "📖 読み終わった教科書", desc: "あなたのことは大体わかってます感。" },
-            { min: 60, title: "🙄 自称・理解者", desc: "「まぁ、これくらいは知ってるよね」というドヤ顔。" },
-            { min: 50, title: "🌫️ ピントのズレた眼鏡", desc: "わかってる風だけど、肝心なところがガバガバ。" },
-            { min: 40, title: "🤏 表面しか見ない人", desc: "浅い。水たまりくらい浅い理解度。" },
-            { min: 30, title: "🙅 壊滅的センス", desc: "逆にどうしてそこを選んだ？奇跡のすれ違い。" },
-            { min: 15, title: "🧊 氷点下の絆", desc: "驚くほど他人。もはや話したことないまである。" },
-            { min: 0, title: "💀 前世で殺し合ってた？", desc: "存在そのものが対消滅するレベル。救いようがない。" }
+            { min: 90, title: "🏆 限界オタク（本人）", desc: "解釈の一致。あなたが私で私があなた。もう結婚しましょう。" },
+            { min: 80, title: "🧠 脳内メーカー直結", desc: "Wi-Fi経由で脳データ吸い出しただろ。隠しても無駄です。" },
+            { min: 70, title: "🧐 古参の理解者", desc: "古くからの付き合いのような理解度。ちょっと引くレベル。" },
+            { min: 60, title: "🤔 知ったかぶり中級者", desc: "一番美味しいところを逃してる。まだ修行が足りない。" },
+            { min: 50, title: "🤡 勘違いモンスター", desc: "ドヤ顔で予想してこれ？恥ずかしくて見てられません。" },
+            { min: 0,  title: "🧊 虚無（ログアウト推奨）", desc: "絶望的なセンス。逆にここまで合わないのは奇跡。" }
         ];
 
         function parseURL(urlStr) {
             try {
                 const url = new URL(urlStr);
                 const v2 = url.searchParams.get('v2');
-                return v2.split('.').map(p => {
+                if (!v2) return null;
+
+                let parts = [];
+                if (v2.includes('.')) {
+                    parts = v2.split('.');
+                } else {
+                    parts = v2.match(/[^_]+_[^_]+_[^_]+/g);
+                }
+
+                if (!parts) return null;
+
+                return parts.map(p => {
                     const [n, v, s] = p.split('_');
-                    return { name: isNaN(n) ? decodeURIComponent(n) : ALL_PRESETS[parseInt(n)], val: parseInt(v) };
+                    return { 
+                        name: isNaN(n) ? decodeURIComponent(n) : (ALL_PRESETS[parseInt(n)] || "不明な性癖"), 
+                        val: parseFloat(v) 
+                    };
                 });
             } catch (e) { return null; }
         }
@@ -195,7 +206,7 @@
             document.getElementById('rankDesc').innerText = rank.desc;
             
             if (syncRate >= 90) document.body.classList.add("rank-god");
-            if (syncRate < 30) document.body.classList.add("rank-bad");
+            if (syncRate < 50) document.body.classList.add("rank-bad");
         }
 
         function animateScore(target) {
@@ -212,7 +223,6 @@
             }, 15);
         }
 
-        // ここが修正箇所：URLのみをコピーするように変更
         function copyShareURL() {
             const urlA = document.getElementById('urlA').value;
             const urlB = document.getElementById('urlB').value;
@@ -229,10 +239,10 @@
                 const shareURL = window.location.origin + window.location.pathname + '?' + shareParams.toString();
                 
                 navigator.clipboard.writeText(shareURL).then(() => {
-                    alert("URLをコピーしました！");
+                    alert("URLのみをコピーしました！");
                 });
             } catch (e) {
-                alert("URLの生成に失敗しました。正しいURLが入力されているか確認してください。");
+                alert("URLの生成に失敗しました。");
             }
         }
 
